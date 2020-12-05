@@ -1,0 +1,23 @@
+{
+  "name": "ffmpeg_lambda",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "pack": "npm-pack-zip"
+  },
+  "keywords": [],
+  "author": "Andrew Hayes",
+  "license": "ISC",
+  "dependencies": {
+    "fluent-ffmpeg": "^2.1.2",
+    "fs": "0.0.1-security",
+    "path": "^0.12.7",
+    "stream-to-promise": "^3.0.0",
+    "tmp": "^0.2.1"
+  },
+  "devDependencies": {
+    "aws-sdk": "^2.804.0"
+  },
+  "bundledDependencies": ["fluent-ffmpeg", "fs", "path", "stream-to-promise", "tmp"]
+}
