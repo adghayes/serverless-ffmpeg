@@ -4,7 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "pack": "npm-pack-zip"
+    "pack": "npm-pack-zip",
+    "update-function-code": "npm run pack && aws lambda update-function-code --function-name audio-transcoder --zip-file fileb://ffmpeg_lambda.zip"
   },
   "keywords": [],
   "author": "Andrew Hayes",
@@ -13,11 +14,16 @@
     "fluent-ffmpeg": "^2.1.2",
     "fs": "0.0.1-security",
     "path": "^0.12.7",
-    "stream-to-promise": "^3.0.0",
     "tmp": "^0.2.1"
   },
   "devDependencies": {
-    "aws-sdk": "^2.804.0"
+    "aws-sdk": "^2.804.0",
+    "npm-pack-zip": "^1.2.7"
   },
-  "bundledDependencies": ["fluent-ffmpeg", "fs", "path", "stream-to-promise", "tmp"]
+  "bundledDependencies": [
+    "fluent-ffmpeg",
+    "fs",
+    "path",
+    "tmp"
+  ]
 }

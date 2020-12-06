@@ -2,74 +2,95 @@ const ffmpeg = require('fluent-ffmpeg')
 const tmp = require('tmp')
 const path = require('path')
 const fs = require('fs')
-const streamToPromise = require('stream-to-promise');
-const AWS = require('aws-sdk')
 
+const AWS = require('aws-sdk')
 const s3 = new AWS.S3()
-// ffmpeg.setFfmpegPath(process.env.BINARY_DIR + 'ffmpeg')
-// ffmpeg.setFfprobePath(process.env.BINARY_DIR + 'ffprobe')
+const isHostedOnAWS = !!(process.env.LAMBDA_TASK_ROOT || process.env.AWS_EXECUTION_ENV)
+if(isHostedOnAWS){
+    ffmpeg.setFfmpegPath(process.env.BINARY_DIR + 'ffmpeg')
+    ffmpeg.setFfprobePath(process.env.BINARY_DIR + 'ffprobe')
+}
 
 function consoleLogTimestamp(message){
-    console.log(`[${new Date().toUTCString()}] ${message}`)
+    console.log(isHostedOnAWS ? message : `[${new Date().toUTCString()}] ${message}`)
 } 
+
+const outputSpecs = [
+    {
+        'format': 'webm',
+        'bitrate': 96
+    },
+    {
+        'format': 'mp3',
+        'bitrate': 128
+    }
+]
+
+function addOutput(ffmpegCommand, output){
+    return ffmpegCommand.output(output.file.name)
+        .format(output.spec.format)
+        .audioBitrate(output.spec.bitrate)
+        .noVideo()
+        .outputOptions('-metadata platform="tunegrid"')
+}
+
+function notifyApp(outputs){
+    // POST output info to main app, could be promise or synchronous
+}
 
 exports.handler = async (event) => {
     const bucket = event.Records[0].s3.bucket
     const object = event.Records[0].s3.object
 
     const inputExt = path.extname(object.key)
-    const inputFile = tmp.fileSync()
-    const inputWriteStream = fs.createWriteStream(inputFile.name);
-    const inputParams = {
-        Bucket: bucket.name,
-        Key: object.key
-    }   
+    const basename = path.basename(object.key, inputExt)
     
-    consoleLogTimestamp('Beginning download...')
-    const s3ReadStream = s3.getObject(inputParams)
-        .createReadStream()
-        .pipe(inputWriteStream)
+    const s3Download = s3.getObject({
+            Bucket: bucket.name,
+            Key: object.key
+        }).createReadStream()
 
-    await streamToPromise(s3ReadStream)
-    consoleLogTimestamp('Download successful.')
+    const outputs = outputSpecs.map(outputSpec => {
+        return {
+            file: tmp.fileSync(),
+            spec: outputSpec
+        }
+    })
 
-    const outputFile = tmp.fileSync()
+    const command = ffmpeg(s3Download)
+    outputs.forEach(output => addOutput(command, output))
     const transcoding = new Promise((resolve, reject) => {
-        consoleLogTimestamp('Beginning transcoding...')
-        ffmpeg(inputFile.name)
-            .output(outputFile.name)
-            .format('webm')
-            .noVideo()
-            .on('error', (err) => {
-                consoleLogTimestamp('Transcoding failed.')
-                reject(err)
-            })
-            .on('end', () => {
-                consoleLogTimestamp('Transcoding successful.')
-                resolve()
-            })
-            .run()
+        command.on('start', commandLine => {
+            consoleLogTimestamp(`Starting transcoding: ${commandLine}`)
+        }).on('progress', progress => {
+            consoleLogTimestamp(`Processing: ${progress.targetSize}KB output`);
+        }).on('error', (err) => {
+            consoleLogTimestamp(`Transcoding failed: ${err.message}`)
+            reject(err)
+        }).on('end', () => {
+            consoleLogTimestamp('Transcoding successful.')
+            resolve()
+        }).run()
     })
 
     await transcoding
 
-
-    const outputReadStream = fs.createReadStream(outputFile.name)
-    const outputKey = 'streams/'  + path.basename(object.key, inputExt) + '.webm'
-    const outputParams = {
-        Bucket: 'tuneboon-assets',
-        Key: outputKey, 
-        Body: outputReadStream
-    }
-
-    consoleLogTimestamp('Beginning upload...')
-    const upload = s3.putObject(outputParams).promise()
-        .then(data => {
-            consoleLogTimestamp('Upload successful.')
+    const uploads = outputs.map(output => {
+        consoleLogTimestamp(`Beginning .${output.spec.format} upload`)
+        return s3.putObject({
+            Bucket: 'tuneboon-assets',
+            Key: 'streams/'  + basename + '.' + output.spec.format, 
+            Body: fs.createReadStream(output.file.name)
+        }).promise().catch(err => {
+            consoleLogTimestamp(`Upload failed: ${err.message}`)
         })
-        .catch(err => {
-            consoleLogTimestamp('Upload failed.')
-        })
+    })
             
-    return upload
+    return Promise.all(uploads)
+        .then(() => {
+            consoleLogTimestamp('Uploads complete.')
+            return notifyApp()
+        }).catch(err => {
+            consoleLogTimestamp(`Notification failed: ${err.message}`)
+        })
 }
