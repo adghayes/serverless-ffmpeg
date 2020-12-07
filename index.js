@@ -1,96 +1,121 @@
 const ffmpeg = require('fluent-ffmpeg')
-const tmp = require('tmp')
-const path = require('path')
+const fetch = require('node-fetch')
 const fs = require('fs')
+const tmp = require('tmp')
+const mime = require('mime-types')
 
-const AWS = require('aws-sdk')
-const s3 = new AWS.S3()
 const isHostedOnAWS = !!(process.env.LAMBDA_TASK_ROOT || process.env.AWS_EXECUTION_ENV)
-if(isHostedOnAWS){
-    ffmpeg.setFfmpegPath(process.env.BINARY_DIR + 'ffmpeg')
-    ffmpeg.setFfprobePath(process.env.BINARY_DIR + 'ffprobe')
-}
+if(isHostedOnAWS) ffmpeg.setFfmpegPath(process.env.BINARY_DIR + 'ffmpeg')
 
-function consoleLogTimestamp(message){
+function log(message){
     console.log(isHostedOnAWS ? message : `[${new Date().toUTCString()}] ${message}`)
-} 
-
-const outputSpecs = [
-    {
-        'format': 'webm',
-        'bitrate': 96
-    },
-    {
-        'format': 'mp3',
-        'bitrate': 128
-    }
-]
-
-function addOutput(ffmpegCommand, output){
-    return ffmpegCommand.output(output.file.name)
-        .format(output.spec.format)
-        .audioBitrate(output.spec.bitrate)
-        .noVideo()
-        .outputOptions('-metadata platform="tunegrid"')
 }
 
-function notifyApp(outputs){
+// returns the name of the temporary file the output will be saved to
+function addOutput(command, output){
+    if (!output.format) throw new Error('output format must be specified')
+    if (!output.destination) throw new Error('no output destination specified')
+    
+    const filename = tmp.tmpNameSync()
+    command.output(filename)
+        .format(output.format)
+        .noVideo()
+
+    // audio-specific options
+    if (output.codec) command.audioCodec(output.codec)
+    if (output.bitrate) command.audioBitrate(output.bitrate)
+    if (output.channels) command.audioChannels(output.channels)
+    if (output.frequency) command.audioFrequency(output.frequency)
+    if (output.quality) command.audioQuality(output.quality)
+    if (output.filters && output.filters.length > 0) command.audioFilters(output.filters)
+
+    // general output options
+    if (output.duration) command.duration(output.duration)
+    if (output.seek) command.seek(output.seek)
+    if (output.options && output.options.length > 0) command.outputOptions(output.options) 
+    if (output.metadata) {
+        for (const [key, value] in Object.entries(output.metadata)){
+            command.outputOptions(`-metadata ${key}="${value}"`)
+        }
+    }
+
+    return filename
+}
+
+// returns a promise for the download as a readable stream
+function download(resource){
+    return fetch(resource)
+        .catch(err => log(`failed to connect for download: ${err.message}`))
+        .then(res => {
+            if (res.status !== 200) log(`resource not accessible: ${statusText}`)
+            return res.body
+                .on('finish', () => log('download complete'))
+                .on('error', err => log(`download error: ${err.message}`))
+        })
+}
+
+// returns the command
+function addInput(command, input, download){
+    command.input(download)
+
+    if (input.format) command.imputFormat(input.format)
+    if (input.seek) command.seekInput(input.seek)
+    if (input.options && input.options.length > 0){
+        command.inputOptions(input.options)
+    }
+
+    return command
+}
+
+// returns a promise for the transcoding
+function transcodingPromise(command, input){
+    return new Promise((resolve, reject) => {
+        command
+            .on('start', commandLine => {
+                log(`starting transcoding: ${commandLine}`)
+            }).on('progress', progress => {
+                log(`processing: ${progress.targetSize}KB output`);
+            }).on('error', (err) => {
+                log(`transcoding failed: ${err.message}`)
+                reject(err)
+            }).on('end', () => {
+                log('transcoding successful')
+                resolve()
+            }).run()
+    })
+}
+
+// returns a promise for the file upload
+function upload(output, filename){
+    log(`starting .${output.format} upload`)
+    return fetch(output.destination, {
+        method: 'PUT',
+        body: fs.createReadStream(filename),
+        headers: {
+            'Content-Length': fs.statSync(filename).size,
+            'Content-Type': mime.lookup(output.format)
+        }
+    })
+}
+
+function notify(event){
     // POST output info to main app, could be promise or synchronous
 }
 
-exports.handler = async (event) => {
-    const bucket = event.Records[0].s3.bucket
-    const object = event.Records[0].s3.object
-
-    const inputExt = path.extname(object.key)
-    const basename = path.basename(object.key, inputExt)
+exports.handler = async (event) => { 
+    const command = ffmpeg()
+    const outputFilenames = event.outputs.map(output => addOutput(command, output))
+    if(!event.input.source) throw new Error('no input source specified')
     
-    const s3Download = s3.getObject({
-            Bucket: bucket.name,
-            Key: object.key
-        }).createReadStream()
+    await download(event.input.source)
+        .then(download => addInput(command, event.input, download))
+        .then(command => transcodingPromise(command))
 
-    const outputs = outputSpecs.map(outputSpec => {
-        return {
-            file: tmp.fileSync(),
-            spec: outputSpec
-        }
-    })
-
-    const command = ffmpeg(s3Download)
-    outputs.forEach(output => addOutput(command, output))
-    const transcoding = new Promise((resolve, reject) => {
-        command.on('start', commandLine => {
-            consoleLogTimestamp(`Starting transcoding: ${commandLine}`)
-        }).on('progress', progress => {
-            consoleLogTimestamp(`Processing: ${progress.targetSize}KB output`);
-        }).on('error', (err) => {
-            consoleLogTimestamp(`Transcoding failed: ${err.message}`)
-            reject(err)
-        }).on('end', () => {
-            consoleLogTimestamp('Transcoding successful.')
-            resolve()
-        }).run()
-    })
-
-    await transcoding
-
-    const uploads = outputs.map(output => {
-        consoleLogTimestamp(`Beginning .${output.spec.format} upload`)
-        return s3.putObject({
-            Bucket: 'tuneboon-assets',
-            Key: 'streams/'  + basename + '.' + output.spec.format, 
-            Body: fs.createReadStream(output.file.name)
-        }).promise().catch(err => {
-            consoleLogTimestamp(`Upload failed: ${err.message}`)
-        })
-    })
+    const uploads = event.outputs.map((output, i) => upload(output, outputFilenames[i]))
             
     return Promise.all(uploads)
         .then(() => {
-            consoleLogTimestamp('Uploads complete.')
-            return notifyApp()
-        }).catch(err => {
-            consoleLogTimestamp(`Notification failed: ${err.message}`)
+            log('uploads complete')
+            return notify(event)
         })
 }
