@@ -1,12 +1,12 @@
 {
-  "name": "ffmpeg_lambda",
+  "name": "ffmpeg-microservice",
   "version": "1.0.0",
-  "description": "a lambda for transcoding audio using ffmpeg and fluent-ffmpeg-node",
+  "description": "microservice for transcoding audio using ffmpeg and fluent-ffmpeg-node",
   "repository": "https://github.com/adghayes/ffmpeg-lambda",
   "main": "index.js",
   "scripts": {
     "pack": "npm-pack-zip",
-    "update-function-code": "npm run pack && aws lambda update-function-code --function-name audio-transcoder --zip-file fileb://ffmpeg_lambda.zip"
+    "update-lambda": "npm run pack && aws lambda update-function-code --function-name $npm_package_name --zip-file fileb://$npm_package_name.zip"
   },
   "keywords": [],
   "author": "Andrew Hayes",
@@ -20,7 +20,6 @@
   },
   "devDependencies": {
     "aws-sdk": "^2.804.0",
-    "jsonschema": "^1.4.0",
     "npm-pack-zip": "^1.2.7"
   },
   "bundledDependencies": [

@@ -4,17 +4,17 @@ AWS.config.region = 'ca-central-1'
 const S3 = new AWS.S3()
 
 const sourceUrl = S3.getSignedUrl('getObject', {
-  Key: 'beat.wav',
+  Key: 'song.aif',
   Bucket: 'tuneboon-originals'
 })
 
 const mp3Url = S3.getSignedUrl('putObject', {
-  Key: 'streams/beat.mp3',
+  Key: 'streams/song.mp3',
   Bucket: 'tuneboon-assets'
 })
 
 const webmUrl = S3.getSignedUrl('putObject', {
-  Key: 'streams/beat.webm',
+  Key: 'streams/song.webm',
   Bucket: 'tuneboon-assets'
 })
 

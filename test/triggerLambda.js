@@ -3,7 +3,7 @@ const event = require('./testEvent.js')
 const Lambda = new AWS.Lambda()
 
 Lambda.invoke({
-  FunctionName: "audio-transcoder",
+  FunctionName: "ffmpeg-microservice",
   InvocationType: "Event",
   Payload: JSON.stringify(event)
 }).send((err, data) => {
