@@ -2,6 +2,7 @@ const AWS = require('aws-sdk')
 AWS.config.signatureVersion = 'v4'
 AWS.config.region = 'ca-central-1'
 const S3 = new AWS.S3()
+const fs = require('fs')
 
 const sourceUrl = S3.getSignedUrl('getObject', {
   Key: 'song.aif',
@@ -44,4 +45,5 @@ const event = {
   ]
 }
 
-module.exports = event
+fs.writeFileSync('event.json', JSON.stringify(event))
+// module.exports = event

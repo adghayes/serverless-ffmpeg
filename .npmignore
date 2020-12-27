@@ -1,3 +1,3 @@
-eventSchema.json
-audio/*
+audio/
 *.zip
+eventSchema.json

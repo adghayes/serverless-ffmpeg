@@ -6,6 +6,7 @@
   "main": "index.js",
   "scripts": {
     "pack": "npm-pack-zip",
+    "test": "jest",
     "update-lambda": "npm run pack && aws lambda update-function-code --function-name $npm_package_name --zip-file fileb://$npm_package_name.zip"
   },
   "keywords": [],
@@ -14,12 +15,18 @@
   "dependencies": {
     "fluent-ffmpeg": "^2.1.2",
     "fs": "0.0.1-security",
+    "lodash.clonedeep": "^4.5.0",
+    "md5-file": "^5.0.0",
     "mime-types": "^2.1.27",
     "node-fetch": "^2.6.1",
     "tmp": "^0.2.1"
   },
   "devDependencies": {
+    "app-root-path": "^3.0.0",
     "aws-sdk": "^2.804.0",
+    "hasbin": "^1.2.3",
+    "jest": "^26.6.3",
+    "nock": "^13.0.5",
     "npm-pack-zip": "^1.2.7"
   },
   "bundledDependencies": [

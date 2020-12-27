@@ -1,0 +1,56 @@
+{
+    "peaks":{
+        "count": 600,
+        "quality": 0.8
+    },
+    "input": {
+        "download": {
+            "url": "https://www.example.com/download",
+            "headers": {
+                "Authorization": "bearer download"
+            }
+        }
+    },
+    "outputs": [
+        {
+            "format": "webm",
+            "audio":{
+                "bitrate": 96
+            },
+            "metadata": {
+                "platform": "platform"
+            },
+            "options": ["-dash 1"],
+            "upload": {
+                "type": "basic",
+                "url": "https://www.example.com/upload/1",
+                "headers": {
+                    "Authorization": "bearer upload"
+                }
+            }
+        },
+        {
+            "format": "mp3",
+            "audio":{
+                "bitrate": 64
+            },
+            "metadata": {
+                "platform": "platform"
+            },
+            "upload": {
+                "type": "basic",
+                "url": "https://www.example.com/upload/2",
+                "headers": {
+                    "Authorization": "bearer upload"
+                }
+            }
+        }
+    ],
+    "callback":{
+        "url": "https://www.example.com/info",
+        "headers": {
+            "Authorization": "bearer callback"
+        },
+        "method":"POST"
+    }
+}
