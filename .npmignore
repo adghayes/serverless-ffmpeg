@@ -1,6 +1,7 @@
 test/
 layers/
-.aws-sam/
+.serverless/
+.serverless-offline/
 *.zip
-template.yaml
+serverless.yml
 .env

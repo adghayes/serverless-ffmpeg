@@ -1,103 +1,88 @@
 
 const fs = require('fs')
-const tmp = require('tmp')
-const projectRoot = require('app-root-path')
-const { execSync } = require('child_process')
-const Peaks = require('../lib/peaks.js')
 
-test('peakInput returns object formatted for addOutputs', () => {
-    expect(Peaks.input(0.5)).toMatchObject({
+const { prepForPeaks, getPeaks } = require('../lib/peaks.js')
+
+const projectRoot = require('app-root-path')
+const testEvent = () => JSON.parse(fs.readFileSync(projectRoot + '/test/events/basic.json'))
+
+test('prepForPeaks adds new output', () => {
+    const event = testEvent()
+    const expected = {
         "format": "s16le",
-        "options": `-ar ${Math.round(44100 * 0.5 ** 3)}`,
-        "audio": true 
-    })
+        "options": expect.stringMatching(/-ar\s\d+/),
+        "audio": expect.anything() 
+    }
+
+    prepForPeaks(event)
+    expect(event.peaks.intermediary).toMatchObject(expected)
+    expect(event.outputs[event.outputs.length - 1]).toMatchObject(expected)
 })
 
 /** 
- *  Testing is done by comparing our results to those produced by 
- *  audiowaveform (aw), a C++ program for creating waveform data and images.
- *  For downloads and documentation, see https://github.com/bbc/audiowaveform. 
- *  An audiowaveform binary must exist on your path to run this test
+ *  audiowaveform (aw) is a C++ program that generates peaks
+ *  and provides a way to roughly compare our generated peaks
  */
-if(!require('hasbin').sync('audiowaveform')){
-    throw new Error(`
-        testing peaks.js output relies on an audiowaveform binary
-        the binary is used to generate waveforms for comparison
-        see https://github.com/bbc/audiowaveformbinary for install
-    `)
-}
-
-/** 
- *  audiowaveform (aw) requires a .wav file, our module requires .raw. 
- *  Most audio files can be converted to both formats with ffmpeg
- */
-const inputNoExension = projectRoot + '/test/files/cantina'
-const awInputPath = inputNoExension + '.wav'
-const myInputPath = inputNoExension + '.raw'
-
-// run audiowaveform
-const awOutputPath = tmp.tmpNameSync()
-const pixelsPerSecond = 100
-const options = [
-    `-i ${awInputPath}`,
-    '--output-format json',
-    `-o ${awOutputPath}`,
-    `--pixels-per-second ${pixelsPerSecond}`
-]
-execSync("audiowaveform " + options.join(' '), {stdio: 'ignore'})
-const awOutput = JSON.parse(fs.readFileSync(awOutputPath))
-const awData = awOutput.data
-const length = awOutput.length
+const testFile = projectRoot + '/test/files/cantina.raw'
+const awOutput = JSON.parse(fs.readFileSync(projectRoot + '/test/files/cantinaPeaks100.json'))
+const peaksCount = awOutput.length
+const awPeaks = awOutput.data
 
 // generate smae number of peaks as audiowaveform
-const Peaker = new Peaks.Finder(length)
+const preppedEvent = testEvent()
+preppedEvent.peaks = {
+    count: peaksCount,
+    intermediary: {
+        local: testFile
+    }
+}
 
-test("global max resembles audiowaveform's (exact value, adjacent index)", () => {
-    return Peaker.getPeaks(myInputPath).then(myData => {
-        const [awMax, awIndex] = findMax(awData)
-        const [myMax, myIndex] = findMax(myData)
+const myPeaksPromise = getPeaks(preppedEvent)
 
-        expect(myMax).toBe(awMax)
-        expect(myIndex).toBeLessThanOrEqual(awIndex + 1)
-        expect(myIndex).toBeGreaterThanOrEqual(awIndex - 1)
-    })
+test("global max resembles audiowaveform's (exact value, adjacent index)", async () => {
+    const myPeaks = await myPeaksPromise
+
+    const [awMax, awIndex] = findMax(awPeaks)
+    const [myMax, myIndex] = findMax(myPeaks)
+
+    expect(myMax).toBe(awMax)
+    expect(myIndex).toBeLessThanOrEqual(awIndex + 1)
+    expect(myIndex).toBeGreaterThanOrEqual(awIndex - 1)
 })
 
-test("global min resembles audiowaveform's (exact value, adjacent index)", () => {
-    return Peaker.getPeaks(myInputPath).then(myData => {
-        const [awMin, awIndex] = findMin(awData)
-        const [myMin, myIndex] = findMin(myData)
+test("global min resembles audiowaveform's (exact value, adjacent index)", async () => {
+    const myPeaks = await myPeaksPromise
 
-        expect(myMin).toBe(awMin)
-        expect(myIndex).toBeLessThanOrEqual(awIndex + 1)
-        expect(myIndex).toBeGreaterThanOrEqual(awIndex - 1)
-    })
+    const [awMin, awIndex] = findMin(awPeaks)
+    const [myMin, myIndex] = findMin(myPeaks)
+
+    expect(myMin).toBe(awMin)
+    expect(myIndex).toBeLessThanOrEqual(awIndex + 1)
+    expect(myIndex).toBeGreaterThanOrEqual(awIndex - 1)
 })
 
-test("global average resembles audiowaveform's (25% margin)", () => {
+test("global average resembles audiowaveform's (25% margin)", async () => {
     margin = 5 / 4
-    return Peaker.getPeaks(myInputPath).then(myData => {
-        myAverage = absAverage(myData)
-        awAverage = absAverage(awData)
-        expect(myAverage).toBeLessThan(awAverage * margin)
-        expect(myAverage).toBeGreaterThan(awAverage / margin)
-    })
+    const myPeaks = await myPeaksPromise
+
+    myAverage = absAverage(myPeaks)
+    awAverage = absAverage(awPeaks)
+    expect(myAverage).toBeLessThan(awAverage * margin)
+    expect(myAverage).toBeGreaterThan(awAverage / margin)
 })
 
-test("local averages (tenth of second) resemble audiowaveform's (33% margin)", () => {
+test("local averages (tenth of second) resemble audiowaveform's (33% margin)", async () => {
     const margin = 4 / 3
     const step = 10
-    return Peaker.getPeaks(myInputPath).then(myData => {
-        
-        for(let i = 0; i < length; i += step){
-            const mySlice = myData.slice(i, i + step)
-            const awSlice = awData.slice(i, i + step)
-            myAverage = absAverage(mySlice)
-            awAverage = absAverage(awSlice)
-            expect(myAverage).toBeLessThan(awAverage * margin)
-            expect(myAverage).toBeGreaterThan(awAverage / margin)
-        }
-    })
+    const myPeaks = await myPeaksPromise
+    for(let i = 0; i < length; i += step){
+        const mySlice = myPeaks.slice(i, i + step)
+        const awSlice = awPeaks.slice(i, i + step)
+        myAverage = absAverage(mySlice)
+        awAverage = absAverage(awSlice)
+        expect(myAverage).toBeLessThan(awAverage * margin)
+        expect(myAverage).toBeGreaterThan(awAverage / margin)
+    }
 }) 
 
 function findMin(data){

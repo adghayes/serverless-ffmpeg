@@ -1,12 +1,11 @@
 const AWS = require('aws-sdk')
-const ep = new AWS.Endpoint('http://127.0.0.1:9001')
 const Lambda = new AWS.Lambda({ 
-    endpoint: ep
+    endpoint: 'http://127.0.0.1:3002'
 })
 const event = require('./event')
 
 Lambda.invoke({
-    FunctionName: "ffmpeg-microservice",
+    FunctionName: "ffmpeg-microservice-dev-transcode",
     InvocationType: "Event",
     Payload: JSON.stringify(event)
   }).send((err, data) => {

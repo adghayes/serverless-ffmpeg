@@ -43,7 +43,7 @@ test('rails event', async () => {
 
 test('failure callback', async () => {
     const event = JSON.parse(fs.readFileSync(projectRoot + '/test/events/invalid-codec.json'))
-    const downloadScope = downloadNock(inputFile, 'invalid-codec')
+    downloadNock(inputFile, 'invalid-codec')
     const callbackScope = failureNock('invalid-codec')
 
     await handler(event)

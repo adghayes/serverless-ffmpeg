@@ -5,17 +5,17 @@ const S3 = new AWS.S3()
 const timestamp = Math.floor(Date.now() / 10 ** 4)
 
 const sourceUrl = S3.getSignedUrl('getObject', {
-  Key: 'originals/big_file.aif',
+  Key: 'originals/beat.wav',
   Bucket: 'ffmpeg-microservice'
 })
 
 const mp3Url = S3.getSignedUrl('putObject', {
-  Key: `streams/big_file-${timestamp}.mp3`,
+  Key: `streams/beat-${timestamp}.mp3`,
   Bucket: 'ffmpeg-microservice'
 })
 
 const webmUrl = S3.getSignedUrl('putObject', {
-  Key: `streams/big_file-${timestamp}.webm`,
+  Key: `streams/beat-${timestamp}.webm`,
   Bucket: 'ffmpeg-microservice'
 })
 

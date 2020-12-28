@@ -1,8 +1,8 @@
 const ffmpeg = require('fluent-ffmpeg')
 
-const addOutputs = require('../lib/addOutputs.js')
+const { addOutputs, addOutput } = require('../lib/output.js')
 const projectRoot = require('app-root-path')
-const input = projectRoot + '/test/files/cantina.wav'
+const testFile = projectRoot + '/test/files/cantina.wav'
 
 const outputs = [
     {
@@ -34,29 +34,29 @@ const expectedFlags =  [
     ['-f mp3', '-b:a 64k', '-vn']
 ]
 
-test('throws if no outputs provided', () => {
+test('addOutputs throws if zero outputs provided', () => {
     expect(() => {
-        addOutputs(ffmpeg(input), [])
+        addOutputs(ffmpeg(testFile), [])
     }).toThrow()
 
     expect(() => {
-        addOutputs(ffmpeg(input), undefined)
-    }).toThrow()
-})
-
-test('throws if no format specified', () => {
-    expect(() => {
-        addOutputs(ffmpeg(input), [{}])
+        addOutputs(ffmpeg(testFile))
     }).toThrow()
 })
 
-test('adds basic audio-only output', done => {
-    const command = ffmpeg(input)
-    const filename = addOutputs(command, outputs.slice(0, 1))[0]
+test('addOutput throws if no format specified', () => {
+    expect(() => {
+        addOutput(ffmpeg(testFile), {})
+    }).toThrow()
+})
+
+test('addOutput adds basic audio-only output', done => {
+    const command = ffmpeg(testFile)
+    const outputFile = addOutput(command, outputs[0])
 
     command
         .on('start', commandLine => {
-            expect(commandLine).toMatch(filename)
+            expect(commandLine).toMatch(outputFile)
             expectedFlags[0].forEach(flag => {
                 expect(commandLine).toMatch(flag)
             })
@@ -65,16 +65,16 @@ test('adds basic audio-only output', done => {
     command.run()
 })
 
-test('adds multiple basic audio-only outputs', done => {
-    const command = ffmpeg(input)
+test('addOutput adds multiple outputs', done => {
+    const command = ffmpeg(testFile)
+    const outputFiles = addOutputs(command, outputs)
 
-    const filenames = addOutputs(command, outputs)
     command
         .on('start', commandLine => {
-            filenames.forEach((filename, idx) => {
-                expect(commandLine).toMatch(filename)
+            outputFiles.forEach((outputFile, idx) => {
+                expect(commandLine).toMatch(outputFile)
                 expectedFlags[idx].forEach(flag => {
-                    expect(commandLine).toMatch(new RegExp(flag + '[^/]*'+ filename))
+                    expect(commandLine).toMatch(new RegExp(flag + '[^/]*'+ outputFile))
                 })
             })
             done()

@@ -22,7 +22,7 @@
             },
             "options": ["-dash 1"],
             "upload": {
-                "type": "rails_direct_upload",
+                "type": "rails",
                 "url": "https://www.example.com/rails/rails-0",
                 "headers": {
                     "Authorization": "bearer rails"
@@ -39,7 +39,7 @@
                 "platform": "platform"
             },
             "upload": {
-                "type": "rails_direct_upload",
+                "type": "rails",
                 "url": "https://www.example.com/rails/rails-1",
                 "headers": {
                     "Authorization": "bearer rails"
