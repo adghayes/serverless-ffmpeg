@@ -1,20 +1,21 @@
 const AWS = require('aws-sdk')
 AWS.config.signatureVersion = 'v4'
-AWS.config.region = 'ca-central-1'
 const S3 = new AWS.S3()
 
+const timestamp = Math.floor(Date.now() / 10 ** 4)
+
 const sourceUrl = S3.getSignedUrl('getObject', {
-  Key: 'originals/song.aif',
+  Key: 'originals/big_file.aif',
   Bucket: 'ffmpeg-microservice'
 })
 
 const mp3Url = S3.getSignedUrl('putObject', {
-  Key: 'streams/song.mp3',
+  Key: `streams/big_file-${timestamp}.mp3`,
   Bucket: 'ffmpeg-microservice'
 })
 
 const webmUrl = S3.getSignedUrl('putObject', {
-  Key: 'streams/song.webm',
+  Key: `streams/big_file-${timestamp}.webm`,
   Bucket: 'ffmpeg-microservice'
 })
 
@@ -47,13 +48,4 @@ const event = {
   ]
 }
 
-const Lambda = new AWS.Lambda()
-
-Lambda.invoke({
-  FunctionName: "ffmpeg-microservice",
-  InvocationType: "Event",
-  Payload: JSON.stringify(event)
-}).send((err, data) => {
-  console.log(`err: ${err}`)
-  console.log(`data: ${JSON.stringify(data)}`)
-})
+module.exports = event

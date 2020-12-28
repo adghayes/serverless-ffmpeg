@@ -31,7 +31,7 @@ test('rails event', async () => {
     const uploadScopes = outputFiles.map((outputFile, idx) => {
         return uploadNock(outputFile, `rails-${idx}`, false)
     })
-    const callbackScope = callbackNock('rails', event.peaks.count)
+    const callbackScope = callbackNock('rails', event.peaks.count, true)
 
     await handler(event)
 

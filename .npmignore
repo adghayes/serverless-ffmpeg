@@ -1,4 +1,6 @@
 test/
+layers/
+.aws-sam/
 *.zip
 template.yaml
 .env

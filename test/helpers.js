@@ -82,8 +82,9 @@ const callbackNock = (id, peaksCount, rails = false) => nock('https://www.exampl
         reqheaders: auth('callback')
     })
     .post(`/info/${id}`, body => {
+        const hasIds = body.outputs.every(output => output.id)
         const hasPeaks = body.peaks && body.peaks.length && body.peaks.length === peaksCount * 2
-        return hasPeaks && body.codecData.duration && body.status
+        return hasPeaks && body.codecData.duration && body.status && (!rails || hasIds)
     })
     .reply(200)
 

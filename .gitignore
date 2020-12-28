@@ -1,2 +1,4 @@
 node_modules/
+layers/
 *.zip
+.aws-sam
