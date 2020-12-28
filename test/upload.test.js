@@ -1,75 +1,36 @@
-const nock = require('nock')
-const mime = require('mime-types')
-const fs = require('fs')
-const md5file = require('md5-file')
+const path = require('path')
 
 const { uploadAll, upload, basicUpload, 
     railsDirectUpload, postRailsBlob } = require('../lib/upload.js')
 
+const { size, type, checksum, auth,
+    railsNock, uploadNock } = require('./helpers.js')
+
 const projectRoot = require('app-root-path')
 const filename = projectRoot + '/test/files/cantina.wav'
-const uploadName = 'music'
-const byteSize = fs.statSync(filename).size
-const contentType = mime.lookup(filename)
-const checksum = Buffer.from(md5file.sync(filename), 'hex').toString('base64')
-const uploadAuth = {'Authorization': 'bearer upload'}
-const railsAuth = {'Authorization': 'bearer blob'}
-
-const railsBlobResponse = id => ({
-    "filename": uploadName,
-    "content_type": contentType,
-    "byte_size": byteSize,
-    "signed_id": id,
-    "direct_upload": {
-        "url": `https://www.example.com/upload/${id}`,
-        "headers": uploadAuth
-    }
-})
-
-const railsBlobNock = id => nock('https://www.example.com', {
-    reqheaders: {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json',
-        ...railsAuth
-    }})
-    .post(`/rails/${id}`, { blob: {
-        filename: 'music',
-        content_type: contentType,
-        byte_size: byteSize,
-        checksum
-    }})
-    .reply(200, () => railsBlobResponse(id))
-
-const uploadNock = id => nock('https://www.example.com',{
-    reqheaders: {
-        'Content-Type': contentType,
-        'Content-Length': byteSize,
-        ...uploadAuth
-    }})
-    .put(`/upload/${id}`, fs.readFileSync(filename))
-    .reply(200)
-
 
 test('basicUpload PUTS file to specified URL with appropriate headers', async () => {
-    uploadNock(1)
+    uploadNock(filename, 1)
 
     const response = await basicUpload(filename, {
-        byteSize, contentType, url: 'https://www.example.com/upload/1',
-        headers: uploadAuth
+        byteSize: size(filename), 
+        contentType: type(filename), 
+        url: 'https://www.example.com/upload/1',
+        headers: auth('upload')
     })
     expect(response.status).toBe(200)
 })
 
 test('postRailsBlob posts necessary attributes and headers', async () => {
-    railsBlobNock(1)
+    railsNock(filename, 1)
 
     const blobInfo = await postRailsBlob({
-        filename: uploadName,
-        byte_size: byteSize,
-        content_type: contentType,
-        checksum
+        filename: 'music',
+        byte_size: size(filename),
+        content_type: type(filename),
+        checksum: checksum(filename)
     }, {
-        headers: railsAuth,
+        headers: auth('rails'),
         url: 'https://www.example.com/rails/1'
     })
     expect(blobInfo).toBeTruthy()
@@ -77,14 +38,15 @@ test('postRailsBlob posts necessary attributes and headers', async () => {
 })
 
 test('railsDirectUpload posts blob then uploads file', async () => {
-    railsBlobNock(2)
-    uploadNock(2)
+    railsNock(filename, 2)
+    uploadNock(filename, 2)
 
     const { signed_id, upload } = await railsDirectUpload(filename, {
         url: 'https://www.example.com/rails/2',
-        headers: railsAuth,
-        byteSize, contentType,
-        name: uploadName
+        headers: auth('rails'),
+        byteSize: size(filename),
+        contentType: type(filename),
+        name: 'music'
     })
 
     expect(signed_id).toBeTruthy()
@@ -100,14 +62,14 @@ test('upload throws error if no url', () => {
 })
 
 test('upload defaults to basic upload', async () => {
-    const railsScope = railsBlobNock(3)
-    uploadNock(3)
+    const railsScope = railsNock(filename, 3)
+    uploadNock(filename, 3)
 
     const response = await upload(filename, {
-        format: 'wav',
+        format: path.extname(filename),
         upload: {
             url: 'https://www.example.com/upload/3',
-            headers: uploadAuth
+            headers: auth('upload')
         }
     })
     
@@ -116,16 +78,16 @@ test('upload defaults to basic upload', async () => {
 })
 
 test('upload handles rails_direct_upload', async () => {
-    railsBlobNock(4)
-    uploadNock(4)
+    railsNock(filename, 4)
+    uploadNock(filename, 4)
 
     const output = {
-        format: 'wav',
+        format: path.extname(filename),
         upload: {
             type: 'rails_direct_upload',
             url: 'https://www.example.com/rails/4',
-            headers: railsAuth,
-            name: uploadName
+            headers: auth('rails'),
+            name: 'music'
         }
     }
 
@@ -136,26 +98,26 @@ test('upload handles rails_direct_upload', async () => {
 })
 
 test('uploadAll handles multiple uploads', async () => {
-    railsBlobNock(5)
-    railsBlobNock(6)
-    uploadNock(5)
-    uploadNock(6)
+    railsNock(filename, 5)
+    railsNock(filename, 6)
+    uploadNock(filename, 5)
+    uploadNock(filename, 6)
 
     const outputs = [{
-        format: 'wav',
+        format: path.extname(filename),
         upload: {
             type: 'rails_direct_upload',
             url: 'https://www.example.com/rails/5',
-            headers: railsAuth,
-            name: uploadName
+            headers: auth('rails'),
+            name: 'music'
         }
     }, {
-        format: 'wav',
+        format: path.extname(filename),
         upload: {
             type: 'rails_direct_upload',
             url: 'https://www.example.com/rails/6',
-            headers: railsAuth,
-            name: uploadName
+            headers: auth('rails'),
+            name: 'music'
         }
     }]
 

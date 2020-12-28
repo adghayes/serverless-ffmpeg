@@ -5,7 +5,7 @@
     },
     "input": {
         "download": {
-            "url": "https://www.example.com/download/basic",
+            "url": "https://www.example.com/download/rails",
             "headers": {
                 "Authorization": "bearer download"
             }
@@ -22,11 +22,12 @@
             },
             "options": ["-dash 1"],
             "upload": {
-                "type": "basic",
-                "url": "https://www.example.com/upload/basic-0",
+                "type": "rails_direct_upload",
+                "url": "https://www.example.com/rails/rails-0",
                 "headers": {
-                    "Authorization": "bearer upload"
-                }
+                    "Authorization": "bearer rails"
+                },
+                "name":"webm_transcoding"
             }
         },
         {
@@ -38,16 +39,17 @@
                 "platform": "platform"
             },
             "upload": {
-                "type": "basic",
-                "url": "https://www.example.com/upload/basic-1",
+                "type": "rails_direct_upload",
+                "url": "https://www.example.com/rails/rails-1",
                 "headers": {
-                    "Authorization": "bearer upload"
-                }
+                    "Authorization": "bearer rails"
+                },
+                "name":"mp3_transcoding"
             }
         }
     ],
     "callback":{
-        "url": "https://www.example.com/info/basic",
+        "url": "https://www.example.com/info/rails",
         "headers": {
             "Authorization": "bearer callback"
         },

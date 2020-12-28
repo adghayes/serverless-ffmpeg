@@ -1,11 +1,7 @@
 {
-    "peaks":{
-        "count": 600,
-        "quality": 0.8
-    },
     "input": {
         "download": {
-            "url": "https://www.example.com/download/basic",
+            "url": "https://www.example.com/download/invalid-codec",
             "headers": {
                 "Authorization": "bearer download"
             }
@@ -13,7 +9,7 @@
     },
     "outputs": [
         {
-            "format": "webm",
+            "format": "copacetic",
             "audio":{
                 "bitrate": 96
             },
@@ -23,7 +19,7 @@
             "options": ["-dash 1"],
             "upload": {
                 "type": "basic",
-                "url": "https://www.example.com/upload/basic-0",
+                "url": "https://www.example.com/upload/invalid-codec-0",
                 "headers": {
                     "Authorization": "bearer upload"
                 }
@@ -39,7 +35,7 @@
             },
             "upload": {
                 "type": "basic",
-                "url": "https://www.example.com/upload/basic-1",
+                "url": "https://www.example.com/upload/invalid-codec-1",
                 "headers": {
                     "Authorization": "bearer upload"
                 }
@@ -47,7 +43,7 @@
         }
     ],
     "callback":{
-        "url": "https://www.example.com/info/basic",
+        "url": "https://www.example.com/info/invalid-codec",
         "headers": {
             "Authorization": "bearer callback"
         },

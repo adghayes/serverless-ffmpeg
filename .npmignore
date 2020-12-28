@@ -1,3 +1,4 @@
-audio/
+test/
 *.zip
-eventSchema.json
+template.yaml
+.env

@@ -1,6 +1,6 @@
 {
   "name": "ffmpeg-microservice",
-  "version": "1.0.0",
+  "version": "0.1.2",
   "description": "microservice for transcoding audio using ffmpeg and fluent-ffmpeg-node",
   "repository": "https://github.com/adghayes/ffmpeg-lambda",
   "main": "index.js",
@@ -13,9 +13,11 @@
   "author": "Andrew Hayes",
   "license": "ISC",
   "dependencies": {
+    "dotenv": "^8.2.0",
     "fluent-ffmpeg": "^2.1.2",
     "fs": "0.0.1-security",
     "lodash.clonedeep": "^4.5.0",
+    "lodash.matches": "^4.6.0",
     "md5-file": "^5.0.0",
     "mime-types": "^2.1.27",
     "node-fetch": "^2.6.1",
@@ -30,10 +32,14 @@
     "npm-pack-zip": "^1.2.7"
   },
   "bundledDependencies": [
+    "dotenv",
     "fluent-ffmpeg",
     "node-fetch",
     "fs",
     "tmp",
-    "mime-types"
+    "mime-types",
+    "lodash.clonedeep",
+    "lodash.matches",
+    "md5-file"
   ]
 }

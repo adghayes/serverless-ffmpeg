@@ -1,7 +1,6 @@
 
 const nock = require('nock')
 const ffmpeg = require('fluent-ffmpeg')
-const tmp = require('tmp')
 
 const addInput = require('../lib/addInput.js')
 const projectRoot = require('app-root-path')

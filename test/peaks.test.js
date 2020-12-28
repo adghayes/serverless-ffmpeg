@@ -3,12 +3,13 @@ const fs = require('fs')
 const tmp = require('tmp')
 const projectRoot = require('app-root-path')
 const { execSync } = require('child_process')
-const { peakInput, PeakFinder } = require('../lib/peaks.js')
+const Peaks = require('../lib/peaks.js')
 
 test('peakInput returns object formatted for addOutputs', () => {
-    expect(peakInput(0.5)).toMatchObject({
+    expect(Peaks.input(0.5)).toMatchObject({
         "format": "s16le",
-        "options": "-ar 5512.5"
+        "options": `-ar ${Math.round(44100 * 0.5 ** 3)}`,
+        "audio": true 
     })
 })
 
@@ -49,7 +50,7 @@ const awData = awOutput.data
 const length = awOutput.length
 
 // generate smae number of peaks as audiowaveform
-const Peaker = new PeakFinder(length)
+const Peaker = new Peaks.Finder(length)
 
 test("global max resembles audiowaveform's (exact value, adjacent index)", () => {
     return Peaker.getPeaks(myInputPath).then(myData => {

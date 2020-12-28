@@ -1,29 +1,102 @@
 const nock = require('nock')
 const mime = require('mime-types')
 const fs = require('fs')
+const tmp = require('tmp')
 const md5file = require('md5-file')
-const projectRoot = require('app-root-path')
 
-const TestFile = {
-    localPath: projectRoot + '/test/files/mini.wav',
-    name: 'music'
-    byteSize: fs.statSync(TestFile.localPath).size
+const sizeCache = {}
+function size(filename){
+    if (!sizeCache[filename]){
+        sizeCache[filename] = fs.statSync(filename).size
+    }
+
+    return sizeCache[filename]
 }
-const filename = projectRoot + '/test/files/mini.wav'
-const uploadName = 'music'
-const byteSize = fs.statSync(filename).size
-const contentType = mime.lookup(filename)
-const checksum = Buffer.from(md5file.sync(filename), 'hex').toString('base64')
-const uploadAuth = {'Authorization': 'bearer upload'}
-const railsAuth = {'Authorization': 'bearer blob'}
 
-const railsBlobResponse = id => ({
-    "filename": uploadName,
-    "content_type": contentType,
-    "byte_size": byteSize,
+const checksumCache = {}
+function checksum(filename){
+    if (!checksumCache[filename]){
+        checksumCache[filename] = Buffer.from(md5file.sync(filename), 'hex').toString('base64')
+    }
+
+    return checksumCache[filename]
+}
+
+function type(filename){
+    return mime.lookup(filename)
+}
+
+function auth(type){
+    return {
+        'Authorization': `bearer ${type}`
+    }
+}
+
+function downloadNock(filename, id){
+    return nock('https://www.example.com', {
+        reqheaders: auth('download')
+    })
+        .get(`/download/${id}`)
+        .replyWithFile(200, filename, {
+            'Content-Type': type(filename),
+            'Content-Length': size(filename)
+        })
+}
+
+const railsResponse = id => ({
     "signed_id": id,
     "direct_upload": {
         "url": `https://www.example.com/upload/${id}`,
-        "headers": uploadAuth
+        "headers": auth('upload')
     }
 })
+
+const railsNock = (filename, id, exact = true) => {
+    return nock('https://www.example.com', {
+        reqheaders: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+            ...auth('rails')
+    }})
+        .post(`/rails/${id}`, { blob: {
+            filename: /.*/,
+            content_type: type(filename),
+            byte_size: (exact ? size(filename) : /\d+/),
+            checksum: (exact ? checksum(filename) : /.+/)
+        }})
+        .reply(200, () => railsResponse(id))
+    }
+
+function uploadNock(filename, id, exact = true){
+        return nock('https://www.example.com',{
+            reqheaders: {
+                'Content-Type': type(filename),
+                'Content-Length': (exact ? size(filename) : /\d+/),
+                ...auth('upload')
+            }})
+            .put(`/upload/${id}`, (exact ? fs.readFileSync(filename) : undefined))
+            .reply(200)
+}
+
+const callbackNock = (id, peaksCount, rails = false) => nock('https://www.example.com', {
+        reqheaders: auth('callback')
+    })
+    .post(`/info/${id}`, body => {
+        const hasPeaks = body.peaks && body.peaks.length && body.peaks.length === peaksCount * 2
+        return hasPeaks && body.codecData.duration && body.status
+    })
+    .reply(200)
+
+const failureNock = id => nock('https://www.example.com', {
+        reqheaders: auth('callback')
+    })
+    .post(`/info/${id}`, body => {
+        return body.status > 299
+    })
+    .reply(200)
+
+
+module.exports = {
+    size, type, checksum, auth, downloadNock, 
+    railsNock, uploadNock, callbackNock, failureNock
+}
