@@ -10,6 +10,7 @@ const outputs = [
         "audio": {
             "bitrate": 96
         },
+        "video": false,
         "metadata": {
             "platform": "platform"
         },
@@ -23,6 +24,7 @@ const outputs = [
         "audio":{
             "bitrate": 64
         },
+        "video": false,
         "upload": {
             "url": "https://www.example.com/upload/3",
         }

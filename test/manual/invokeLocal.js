@@ -5,7 +5,7 @@ const Lambda = new AWS.Lambda({
 const event = require('./event')
 
 Lambda.invoke({
-    FunctionName: "ffmpeg-microservice-dev-transcode",
+    FunctionName: "ffmpeg-dev-transcode",
     InvocationType: "Event",
     Payload: JSON.stringify(event)
   }).send((err, data) => {
