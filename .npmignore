@@ -1,7 +1,0 @@
-test/
-layers/
-.serverless/
-.serverless-offline/
-*.zip
-serverless.yml
-.env

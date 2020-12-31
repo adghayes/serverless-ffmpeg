@@ -1,130 +1,170 @@
-const path = require('path')
+const path = require("path");
+const fs = require("fs");
+const nock = require("nock");
+const cloneDeep = require("lodash.clonedeep");
 
-const { uploadAll, upload, basicUpload, 
-    railsDirectUpload, postRailsBlob } = require('../lib/upload.js')
+const {
+  uploadAll,
+  upload,
+  basicUpload,
+  railsUpload,
+  railsBlob,
+} = require("../lib/upload.js");
 
-const { size, type, checksum, auth,
-    railsNock, uploadNock } = require('./helpers.js')
+const { size, type, checksum, auth } = require("./helpers.js");
 
-const projectRoot = require('app-root-path')
-const testFile = projectRoot + '/test/files/cantina.wav'
+const projectRoot = require("app-root-path");
+const testFile = projectRoot + "/test/files/mini.wav";
 
-test('basicUpload PUTS file to specified URL with appropriate headers', async () => {
-    uploadNock(testFile, 1)
+const outputBase = {
+  local: testFile,
+  format: path.extname(testFile),
+  upload: {
+    byteSize: size(testFile),
+    contentType: type(testFile),
+  },
+};
 
-    const response = await basicUpload({
-        local: testFile,
-        upload: {
-            byteSize: size(testFile), 
-            contentType: type(testFile), 
-            url: 'https://www.example.com/upload/1',
-            headers: auth('upload')
-        }
-    })
-    expect(response.status).toBe(200)
-})
+test("basicUpload PUTS exact file to URL", async () => {
+  const scope = nock("https://www.example.com")
+    .put(`/upload/exact`, fs.readFileSync(testFile))
+    .reply(200);
 
-test('postRailsBlob posts necessary attributes and headers', async () => {
-    railsNock(testFile, 1)
+  const output = cloneDeep(outputBase);
+  output.upload.url = "https://www.example.com/upload/exact";
 
-    const blobInfo = await postRailsBlob({
-        filename: 'anything',
-        byte_size: size(testFile),
+  await basicUpload(output);
+  expect(scope.isDone()).toBe(true);
+});
+
+test("basicUpload PUTS to specified URL with required headers", async () => {
+  const scope = nock("https://www.example.com", {
+    reqheaders: {
+      "Content-Type": type(testFile),
+      "Content-Length": size(testFile),
+      ...auth("upload"),
+    },
+  })
+    .put(`/upload/headers`)
+    .reply(200);
+
+  const output = cloneDeep(outputBase);
+  output.upload.url = "https://www.example.com/upload/headers";
+  output.upload.headers = auth("upload");
+
+  await basicUpload(output);
+  expect(scope.isDone()).toBe(true);
+});
+
+const railsOutput = cloneDeep(outputBase);
+railsOutput.upload.name = "anything";
+railsOutput.upload.headers = auth("rails");
+railsOutput.upload.type = "rails";
+
+test("railsBlob POSTS blob attributes", async () => {
+  const scope = nock("https://www.example.com")
+    .post(`/rails/attributes`, {
+      blob: {
+        filename: /.*/,
         content_type: type(testFile),
-        checksum: checksum(testFile)
-    }, {
-        headers: auth('rails'),
-        url: 'https://www.example.com/rails/1'
+        byte_size: size(testFile),
+        checksum: checksum(testFile),
+      },
     })
-    expect(blobInfo).toBeTruthy()
-    expect(blobInfo.signed_id).toBeTruthy()
-})
+    .reply(200, {});
 
-test('railsDirectUpload posts blob then uploads file', async () => {
-    railsNock(testFile, 2)
-    uploadNock(testFile, 2)
+  const output = cloneDeep(railsOutput);
+  output.upload.url = "https://www.example.com/rails/attributes";
 
-    const { signedId, upload } = await railsDirectUpload({
-        local: testFile, 
-        upload: {
-            url: 'https://www.example.com/rails/2',
-            headers: auth('rails'),
-            byteSize: size(testFile),
-            contentType: type(testFile),
-            name: 'anything'
-        }
-    })
+  await railsBlob(output);
+  expect(scope.isDone()).toBe(true);
+});
 
-    expect(signedId).toBeTruthy()
+test("railsBlob POSTS necessary headers", async () => {
+  const scope = nock("https://www.example.com", {
+    reqheaders: {
+      Accept: "application/json",
+      "Content-Type": "application/json",
+      ...auth("rails"),
+    },
+  })
+    .post(`/rails/headers`)
+    .reply(200, {});
 
-    const response = await upload
-    expect(response.status).toBe(200)
-})
+  const output = cloneDeep(railsOutput);
+  output.upload.url = "https://www.example.com/rails/headers";
 
-test('upload defaults to basic upload', async () => {
-    const railsScope = railsNock(testFile, 3)
-    uploadNock(testFile, 3)
+  await railsBlob(output);
+  expect(scope.isDone()).toBe(true);
+});
 
-    const response = await upload({
-        local: testFile,
-        format: path.extname(testFile),
-        upload: {
-            url: 'https://www.example.com/upload/3',
-            headers: auth('upload')
-        }
-    })
-    
-    expect(response.status).toBe(200)
-    expect(railsScope.isDone()).toBe(false)
-})
+test("railsUpload", async () => {
+  const railsScope = nock("https://www.example.com")
+    .post(`/rails/upload`)
+    .reply(200, {
+      signed_id: 1,
+      direct_upload: {
+        url: `https://www.example.com/upload/railsDirect`,
+        headers: auth("upload"),
+      },
+    });
 
-test('upload handles rails-type uploads', async () => {
-    railsNock(testFile, 4)
-    uploadNock(testFile, 4)
+  const uploadScope = nock("https://www.example.com", {
+    reqheaders: auth("upload"),
+  })
+    .put(`/upload/railsDirect`)
+    .reply(200);
 
-    const output = {
-        local: testFile,
-        format: path.extname(testFile),
-        upload: {
-            type: 'rails',
-            url: 'https://www.example.com/rails/4',
-            headers: auth('rails'),
-            name: 'music'
-        }
-    }
+  const output = cloneDeep(railsOutput);
+  output.upload.url = "https://www.example.com/rails/upload";
 
-    const response = await upload(output)
-    
-    expect(response.status).toBe(200)
-    expect(output.id).toBeTruthy()
-})
+  const { signedId, upload } = await railsUpload(output);
 
-test('uploadAll handles multiple uploads', async () => {
-    railsNock(testFile, 5)
-    railsNock(testFile, 6)
-    uploadNock(testFile, 5)
-    uploadNock(testFile, 6)
+  expect(signedId).toBeTruthy();
+  expect(railsScope.isDone()).toBe(true);
 
-    const outputs = [{
-        local: testFile,
-        format: path.extname(testFile),
-        upload: {
-            type: 'rails',
-            url: 'https://www.example.com/rails/5',
-            headers: auth('rails'),
-            name: 'music'
-        }
-    }, {
-        local: testFile,
-        format: path.extname(testFile),
-        upload: {
-            type: 'rails',
-            url: 'https://www.example.com/rails/6',
-            headers: auth('rails'),
-            name: 'music'
-        }
-    }]
+  await upload;
+  expect(uploadScope.isDone()).toBe(true);
+});
 
-    const responses = await Promise.all(uploadAll(outputs))
-    responses.forEach(response => expect(response.status).toBe(200))
-})
+test("upload inserts content-length and content-type", async () => {
+  const scope = nock("https://www.example.com", {
+    reqheaders: {
+      "Content-Type": type(testFile),
+      "Content-Length": size(testFile),
+    },
+  })
+    .put(`/upload/type`)
+    .reply(200);
+
+  const output = cloneDeep(outputBase);
+  output.upload.url = "https://www.example.com/upload/type";
+
+  await upload(output);
+  expect(scope.isDone()).toBe(true);
+});
+
+test("uploadAll handles multiple uploads of varying types", async () => {
+  const railsScope = nock("https://www.example.com")
+    .post(`/rails/multiple`)
+    .reply(200, {
+      direct_upload: { url: `https://www.example.com/upload/multiple` },
+    });
+
+  const uploadScope = nock("https://www.example.com")
+    .put(`/upload/multiple`)
+    .twice()
+    .reply(200);
+
+  const basicOutput = cloneDeep(outputBase);
+  basicOutput.upload.url = "https://www.example.com/upload/multiple";
+
+  const railsOutputClone = cloneDeep(railsOutput);
+  railsOutputClone.upload.url = `https://www.example.com/rails/multiple`;
+
+  const outputs = [railsOutputClone, basicOutput];
+  await Promise.all(uploadAll(outputs));
+
+  expect(railsScope.isDone()).toBe(true);
+  expect(uploadScope.isDone()).toBe(true);
+});

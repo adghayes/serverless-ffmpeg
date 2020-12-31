@@ -1,5 +1,7 @@
-node_modules/
-layers/
 *.zip
+node_modules/
 .serverless/
 .serverless-offline/
+archive/
+.npmignore
+.prettierrc

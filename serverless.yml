@@ -1,10 +1,8 @@
-
-
 org: adghayes
 app: noisepuff
 service: ffmpeg
 
-frameworkVersion: '2'
+frameworkVersion: "2"
 
 provider:
   name: aws
@@ -13,10 +11,10 @@ provider:
   region: ca-central-1
 
 package:
-  exclude: 
+  exclude:
     - .serverless-offline/**
     - test/**
-    - .npmignore
+    - archive/**
 
 functions:
   transcode:
@@ -27,7 +25,8 @@ functions:
     environment:
       BINARY_DIR: /opt/ffmpeg-git-20201128-amd64-static/
       FFMPEG_LOG: 1
-
+    memorySize: 4096
+    timeout: 300
 
 plugins:
   - serverless-offline

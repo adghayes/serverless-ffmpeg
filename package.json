@@ -25,6 +25,7 @@
     "aws-sdk": "^2.804.0",
     "hasbin": "^1.2.3",
     "jest": "^26.6.3",
+    "lodash.clonedeep": "^4.5.0",
     "nock": "^13.0.5",
     "npm-pack-zip": "^1.2.7",
     "serverless": "^2.16.1",

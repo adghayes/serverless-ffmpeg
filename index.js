@@ -1,3 +1,3 @@
-const handler = require('./lib/handler')
+const handler = require("./lib/handler");
 
-exports.handler = handler
+exports.handler = handler;

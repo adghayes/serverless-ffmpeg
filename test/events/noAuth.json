@@ -1,10 +1,7 @@
 {
   "input": {
     "download": {
-      "url": "https://www.example.com/download/rails",
-      "headers": {
-        "Authorization": "bearer download"
-      }
+      "url": "https://www.example.com/download/noAuth"
     }
   },
   "outputs": [
@@ -18,12 +15,11 @@
       },
       "options": ["-dash 1"],
       "upload": {
-        "type": "rails",
-        "url": "https://www.example.com/rails/rails-0",
+        "type": "basic",
+        "url": "https://www.example.com/upload/noAuth-0",
         "headers": {
-          "Authorization": "bearer rails"
-        },
-        "name": "webm_transcoding"
+          "Authorization": "bearer upload"
+        }
       }
     },
     {
@@ -35,17 +31,16 @@
         "platform": "platform"
       },
       "upload": {
-        "type": "rails",
-        "url": "https://www.example.com/rails/rails-1",
+        "type": "basic",
+        "url": "https://www.example.com/upload/noAuth-1",
         "headers": {
-          "Authorization": "bearer rails"
-        },
-        "name": "mp3_transcoding"
+          "Authorization": "bearer upload"
+        }
       }
     }
   ],
   "callback": {
-    "url": "https://www.example.com/info/rails",
+    "url": "https://www.example.com/info/noAuth",
     "headers": {
       "Authorization": "bearer callback"
     },

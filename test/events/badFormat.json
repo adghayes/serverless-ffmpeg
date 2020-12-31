@@ -1,7 +1,7 @@
 {
   "input": {
     "download": {
-      "url": "https://www.example.com/download/rails",
+      "url": "https://www.example.com/download/badFormat",
       "headers": {
         "Authorization": "bearer download"
       }
@@ -9,7 +9,7 @@
   },
   "outputs": [
     {
-      "format": "webm",
+      "format": "copacetic",
       "audio": {
         "bitrate": 96
       },
@@ -18,12 +18,11 @@
       },
       "options": ["-dash 1"],
       "upload": {
-        "type": "rails",
-        "url": "https://www.example.com/rails/rails-0",
+        "type": "basic",
+        "url": "https://www.example.com/upload/badFormat-0",
         "headers": {
-          "Authorization": "bearer rails"
-        },
-        "name": "webm_transcoding"
+          "Authorization": "bearer upload"
+        }
       }
     },
     {
@@ -35,17 +34,16 @@
         "platform": "platform"
       },
       "upload": {
-        "type": "rails",
-        "url": "https://www.example.com/rails/rails-1",
+        "type": "basic",
+        "url": "https://www.example.com/upload/badFormat-1",
         "headers": {
-          "Authorization": "bearer rails"
-        },
-        "name": "mp3_transcoding"
+          "Authorization": "bearer upload"
+        }
       }
     }
   ],
   "callback": {
-    "url": "https://www.example.com/info/rails",
+    "url": "https://www.example.com/info/badFormat",
     "headers": {
       "Authorization": "bearer callback"
     },
