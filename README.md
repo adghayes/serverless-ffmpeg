@@ -63,21 +63,21 @@ Because the function uses [fluent-ffmpeg](https://github.com/fluent-ffmpeg/node-
   "metadata": {
     "platform": "soundcloud"
   },
-  "options": ["-dash 1", ...],
+  "options": ["-dash 1", "..."],
   "audio": {
     "bitrate": 96,
     "codec": "libopus",
     "channels": 2,
     "frequency": 44100,
     "quality": 0.9,
-    "filters": ["volume=0.5", ...]
+    "filters": ["volume=0.5", "..."]
   },
   "video": {
     "fps": 60,
     "codec": "libvpx",
     "bitrate": 1000,
     "constantBitrate": true,
-    "filters": ["fade=in:0:30", ...],
+    "filters": ["fade=in:0:30", "..."],
     "frames": 240,
     "size": "640x480",
     "aspect": "4:3",
@@ -95,16 +95,12 @@ Keep in mind that some parameters conflict with one another (the above would cer
     "count": 600,
     "quality": 0.8
   },
-  ...,
-  "outputs"[
+  "outputs": [
     {
-      ...,
       "upload":{
         "type":"rails",
-        ...
       }
     },
-    ...
   ]
 ```
 If the conversion and uploads are successful, the callback will include ffprobe generated metadata about the input file, peaks if peaks were requested, and blob ids if the uploads were of type "rails." If the function fails at any point - usually due to an ill-formed ffmpeg command or 400 level HTTP responses - it will try to make a callback with a relevant status code and status message. 
