@@ -1,15 +1,15 @@
 # serverless-ffmpeg
 
-DIY audio/video asset transcoding via a serverless function that wraps FFmpeg. Use as a reference project or clone to deploy quickly to AWS Lambda or another compatible serverless platform.
+Audio and video asset transcoding with a serverless function that wraps FFmpeg. Use as a reference project or clone to deploy quickly to AWS Lambda or another compatible serverless platform.
 
 # Usage
 
-The function simply transcodes audio based on parameters in the invoking event. In the following example, I'm requesting the function to download a file, transcode it to two different audio formats, upload both of those results to separate URLs, and make a callback to my server:
+The function simply transcodes media based on parameters in the invoking event. In response to the following request, the function will download a file, transcode it to two different audio formats, upload both of those results to separate URLs, and make a callback to my server:
 ```json
 {
   "input": {
     "download": {
-      "url": "https://www.example.com/download/basic",
+      "url": "https://www.example.com/download",
       "headers": {
         "Authorization": "bearer download"
       }
@@ -18,6 +18,7 @@ The function simply transcodes audio based on parameters in the invoking event. 
   "outputs": [
     {
       "format": "webm",
+      "extension": "weba",
       "audio": {
         "bitrate": 96
       },
@@ -54,10 +55,11 @@ The function simply transcodes audio based on parameters in the invoking event. 
 }
 ```
 
-Because the function uses [fluent-ffmpeg](https://github.com/fluent-ffmpeg/node-fluent-ffmpeg) as an API, it supports the majority of that library's named options. You can specify an array of command line options for the input or any output, however, so you can use most of ffmpeg's settings if you are familiar with the CLI. Multiple inputs and streaming are not supported at the moment. Here are the full output options:
+Because the function uses [fluent-ffmpeg](https://github.com/fluent-ffmpeg/node-fluent-ffmpeg) as an API, it supports the majority of that library's named options. You can specify an array of command line options for the input or for any output, however, so you can use most of ffmpeg's settings if you are familiar with the CLI. Multiple inputs and streaming are not supported at the moment. Here are the full output options:
 ```json
 {
   "format": "webm",
+  "extension": "weba",
   "duration": 60,
   "seek": 30,
   "metadata": {
@@ -102,6 +104,7 @@ Keep in mind that some parameters conflict with one another (the above would cer
       }
     },
   ]
+}
 ```
 If the conversion and uploads are successful, the callback will include ffprobe generated metadata about the input file, peaks if peaks were requested, and blob ids if the uploads were of type "rails." If the function fails at any point - usually due to an ill-formed ffmpeg command or 400 level HTTP responses - it will try to make a callback with a relevant status code and status message. 
 
@@ -138,7 +141,7 @@ On AWS Lambda, I found that the optimal memory size for transcoding _audio_ file
 Unless you're transcoding very large files, the problem is not actually memory availability - FFmpeg is quite memory efficient and the function doesn't use much memory in comparison to the actual files. Increasing memory size is effective, however, because Lambda CPU power is allocated proportionally.
 
 ### Concurrency
-Running multiple transcodings in parallel (as opposed to one transcoding with many outputs) was found to not make much of a difference in billed duration. Separating conversions across different functions is signicantly faster, although the cumulative duration and cost will be higher than bundling them together.
+Running multiple transcodings in parallel (as opposed to one transcoding with many outputs) was found to not make much of a difference in billed duration. Separating conversions across different functions is significantly faster, although the cumulative duration and cost will be higher than bundling them together.
 
 ### Duration Rule of Thumb
 
