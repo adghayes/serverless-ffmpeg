@@ -12,6 +12,7 @@ test("prepForPeaks adds new output", () => {
     format: "s16le",
     options: expect.stringMatching(/-ar\s\d+/),
     audio: expect.anything(),
+    video: false
   };
 
   prepForPeaks(event);
